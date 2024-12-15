@@ -1,0 +1,46 @@
+name: Deployment pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize]
+
+env:
+  SKIP_DEPLOY_CONDITION: ${{ contains(join(github.event.commits.*.message, ' '), '#skip') }}
+
+jobs:
+  simple_deployment_pipeline:
+    if: env.SKIP_DEPLOY_CONDITION == 'false' # Skip deployment if commit messages contain #skip
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Lint code
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+      - name: Deploy application
+        run: echo "Deploying application..." # Replace with actual deployment steps
+
+  tag_release:
+    if: env.SKIP_DEPLOY_CONDITION == 'false' # Skip tagging if commit messages contain #skip
+    needs: [simple_deployment_pipeline]
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Bump version and push tag
+        uses: anothrNick/github-tag-action@1.64.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BUMP: patch
